@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -34,6 +35,9 @@ LLM_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 UNSUPPORTED_ANSWER = "The knowledge base does not provide enough information to answer this."
 # Used only by the offline fallback (no API key): below this retrieval score we refuse to answer.
 FALLBACK_MIN_SCORE = 0.15
+LLM_MAX_ATTEMPTS = 3          # retries only for rate-limit (429) errors
+LLM_RETRY_WAIT_SECONDS = 5    # waits 5s, then 10s
+LLM_CALL_GAP_SECONDS = 1      # small pause between questions to stay under per-minute limits
 
 
 def log_stage(stage: str) -> None:
@@ -198,14 +202,28 @@ def generate_with_gemini(client, item: dict) -> dict:
         "input_artifacts": ["artifacts/retrieval_results.json"],
         "output_artifact": "artifacts/answers.json",
     }
-    try:
-        interaction = client.interactions.create(model=LLM_MODEL, input=prompt)
-        parsed = parse_llm_json(interaction.output_text)
-        log["status"] = "ok"
-    except Exception as e:  # API error or unparseable output -> refuse rather than guess
-        print(f"   ! question {item['id']}: LLM call failed ({type(e).__name__}: {e}); marking unsupported")
-        parsed = {"answer": UNSUPPORTED_ANSWER, "supported": False, "citations": []}
-        log["status"] = f"error: {type(e).__name__}"
+    parsed, error = None, None
+    for attempt in range(1, LLM_MAX_ATTEMPTS + 1):
+        try:
+            interaction = client.interactions.create(model=LLM_MODEL, input=prompt)
+            parsed = parse_llm_json(interaction.output_text)
+            log["status"] = "ok"
+            break
+        except Exception as e:
+            error = e
+            rate_limited = "429" in str(e) or "RateLimit" in type(e).__name__
+            if rate_limited and attempt < LLM_MAX_ATTEMPTS:
+                wait = LLM_RETRY_WAIT_SECONDS * attempt
+                print(f"   ~ question {item['id']}: rate limited, retrying in {wait}s ({attempt}/{LLM_MAX_ATTEMPTS})")
+                time.sleep(wait)
+                continue
+            break
+    if parsed is None:
+        # LLM unavailable: degrade to the grounded extractive fallback instead of crashing.
+        # Its output still goes through the same citation validation.
+        print(f"   ! question {item['id']}: LLM failed ({type(error).__name__}); using extractive fallback")
+        parsed = generate_extractive(item)
+        log["status"] = f"error: {type(error).__name__} -> extractive fallback"
     log_llm_call(log)
     return parsed
 
@@ -242,10 +260,55 @@ def generate_answers(retrieval: list[dict]) -> tuple[list[dict], str]:
         mode = "extractive-fallback"
 
     answers = []
-    for item in retrieval:
+    for i, item in enumerate(retrieval):
+        if client and i:
+            time.sleep(LLM_CALL_GAP_SECONDS)
         result = generate_with_gemini(client, item) if client else generate_extractive(item)
         answers.append({"id": item["id"], "question": item["question"], **result})
     return answers, mode
+
+
+# ---- Stage 5: Citation validation (deterministic, no LLM) ----
+NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def extract_numbers(text: str) -> set[str]:
+    """Numbers normalised so '1,000' and '1000' compare equal."""
+    return {n.replace(",", "") for n in NUMBER_RE.findall(text)}
+
+
+def validate_answer(answer: dict, retrieved: list[dict]) -> dict:
+    issues = []
+    retrieved_by_id = {c["chunk_id"]: c for c in retrieved}
+    citations = answer.get("citations", [])
+
+    # Rule 1: every cited chunk must be one that was actually retrieved for this question
+    for cid in citations:
+        if cid not in retrieved_by_id:
+            issues.append(f"cited chunk '{cid}' was not retrieved for this question")
+
+    # Rule 2: supported answers need at least one citation
+    if answer.get("supported") and not citations:
+        issues.append("answer is marked supported but has no citations")
+
+    # Rule 3: unsupported answers must not cite anything
+    if not answer.get("supported") and citations:
+        issues.append("answer is marked unsupported but has citations")
+
+    # Grounding check: every number in a supported answer must appear in the cited text.
+    # Catches the most damaging hallucination for this domain: wrong limits, prices, durations.
+    if answer.get("supported"):
+        cited_text = " ".join(retrieved_by_id[c]["text"] for c in citations if c in retrieved_by_id)
+        missing = sorted(extract_numbers(answer.get("answer", "")) - extract_numbers(cited_text))
+        if missing:
+            issues.append(f"numeric claims not found in cited chunks: {missing}")
+
+    return {"id": answer["id"], "passed": not issues, "issues": issues}
+
+
+def validate_citations(answers: list[dict], retrieval: list[dict]) -> list[dict]:
+    retrieved_for = {r["id"]: r["retrieved_chunks"] for r in retrieval}
+    return [validate_answer(a, retrieved_for.get(a["id"], [])) for a in answers]
 
 
 def main() -> None:
@@ -276,7 +339,15 @@ def main() -> None:
     save_json("answers.json", answers)
     log_stage(f"ANSWERS_GENERATED (mode: {mode})")
 
-    # Next: CITATIONS_VALIDATED -> RESULTS_EXPORTED -> VALIDATION_COMPLETE
+    validation = validate_citations(answers, retrieval)
+    save_json("citation_validation.json", validation)
+    failures = sum(not v["passed"] for v in validation)
+    log_stage(f"CITATIONS_VALIDATED ({failures} failures)")
+    for v in validation:
+        if not v["passed"]:
+            print(f"   ! question {v['id']}: {'; '.join(v['issues'])}")
+
+    # Next: RESULTS_EXPORTED -> VALIDATION_COMPLETE
 
 
 if __name__ == "__main__":
