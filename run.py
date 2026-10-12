@@ -311,11 +311,29 @@ def validate_citations(answers: list[dict], retrieval: list[dict]) -> list[dict]
     return [validate_answer(a, retrieved_for.get(a["id"], [])) for a in answers]
 
 
+# ---- Stage 6: Final export ----
+def build_final_answers(answers: list[dict], retrieval: list[dict], validation: list[dict]) -> list[dict]:
+    retrieved_for = {r["id"]: [c["chunk_id"] for c in r["retrieved_chunks"]] for r in retrieval}
+    validation_for = {v["id"]: v for v in validation}
+    return [{
+        "id": a["id"],
+        "question": a["question"],
+        "answer": a["answer"],
+        "supported": a["supported"],
+        "citations": a["citations"],
+        "retrieved_chunk_ids": retrieved_for.get(a["id"], []),
+        "validation": {
+            "passed": validation_for[a["id"]]["passed"],
+            "issues": validation_for[a["id"]]["issues"],
+        },
+    } for a in answers]
+
+
 def main() -> None:
     load_dotenv()
     log_stage("INIT")
     ARTIFACTS_DIR.mkdir(exist_ok=True)
-    (ARTIFACTS_DIR / "llm_calls.jsonl").unlink(missing_ok=True)  # fresh log per run
+    (ARTIFACTS_DIR / "llm_calls.jsonl").write_text("", encoding="utf-8")  # fresh log per run
 
     documents = load_documents(DOCS_DIR)
     save_json("documents.json", documents)
@@ -347,7 +365,25 @@ def main() -> None:
         if not v["passed"]:
             print(f"   ! question {v['id']}: {'; '.join(v['issues'])}")
 
-    # Next: RESULTS_EXPORTED -> VALIDATION_COMPLETE
+    final_answers = build_final_answers(answers, retrieval, validation)
+    save_json("final_answers.json", final_answers)
+    log_stage("RESULTS_EXPORTED")
+
+    # Final pass: re-check the artifacts on disk with the standalone validator
+    from validate import run_checks
+    checks = run_checks()
+    checks_failed = [name for name, passed, _ in checks if not passed]
+    log_stage(f"VALIDATION_COMPLETE ({len(checks) - len(checks_failed)}/{len(checks)} artifact checks passed)")
+
+    print("\n===== SUMMARY =====")
+    print(f"Documents:              {len(documents)}")
+    print(f"Chunks:                 {len(chunks)}")
+    print(f"Questions:              {len(questions)}")
+    print(f"Supported answers:      {sum(a['supported'] for a in answers)}")
+    print(f"Validation failures:    {failures}")
+    print(f"Answer mode:            {mode}")
+    if checks_failed:
+        print(f"Artifact checks failed: {', '.join(checks_failed)}  (run `python validate.py` for details)")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,109 @@
+[
+  {
+    "id": 1,
+    "question": "What authentication methods does the API support?",
+    "answer": "The platform supports two authentication methods for API access: API Keys and OAuth 2.0.",
+    "supported": true,
+    "citations": [
+      "authentication::chunk_0"
+    ],
+    "retrieved_chunk_ids": [
+      "authentication::chunk_0",
+      "pricing::chunk_0",
+      "pricing::chunk_1"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  {
+    "id": 2,
+    "question": "How long are webhook delivery logs retained?",
+    "answer": "Webhook delivery logs are retained for 30 days, after which they are permanently deleted and cannot be recovered.",
+    "supported": true,
+    "citations": [
+      "webhooks::chunk_1"
+    ],
+    "retrieved_chunk_ids": [
+      "webhooks::chunk_1",
+      "webhooks::chunk_0",
+      "data-retention::chunk_0"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  {
+    "id": 3,
+    "question": "Is there a free plan for startups?",
+    "answer": "Yes, the Free plan is available to any developer, including startups, with no application required. Additionally, startups with fewer than 10 employees and under $1M in funding can apply for the Startup Program to receive Growth-tier features at no cost for the first 12 months.",
+    "supported": true,
+    "citations": [
+      "pricing::chunk_1"
+    ],
+    "retrieved_chunk_ids": [
+      "pricing::chunk_1",
+      "rate-limits::chunk_0",
+      "pricing::chunk_0"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  {
+    "id": 4,
+    "question": "What happens if I exceed the rate limit?",
+    "answer": "If you exceed your rate limit, the API returns an HTTP 429 Too Many Requests response, and rate-limited requests are rejected outright rather than being queued.",
+    "supported": true,
+    "citations": [
+      "rate-limits::chunk_0",
+      "rate-limits::chunk_1"
+    ],
+    "retrieved_chunk_ids": [
+      "rate-limits::chunk_1",
+      "rate-limits::chunk_0",
+      "rate-limits::chunk_2"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  {
+    "id": 5,
+    "question": "Can I delete customer data immediately on request?",
+    "answer": "No, customer-initiated deletion requests are not processed immediately; they are queued and executed within 30 days.",
+    "supported": true,
+    "citations": [
+      "data-retention::chunk_1"
+    ],
+    "retrieved_chunk_ids": [
+      "data-retention::chunk_1",
+      "data-retention::chunk_0",
+      "data-retention::chunk_2"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  },
+  {
+    "id": 6,
+    "question": "Does the platform support GraphQL subscriptions?",
+    "answer": "The knowledge base does not provide enough information to answer this.",
+    "supported": false,
+    "citations": [],
+    "retrieved_chunk_ids": [
+      "webhooks::chunk_2",
+      "pricing::chunk_0",
+      "webhooks::chunk_1"
+    ],
+    "validation": {
+      "passed": true,
+      "issues": []
+    }
+  }
+]

@@ -2,7 +2,7 @@
   {
     "id": 1,
     "question": "What authentication methods does the API support?",
-    "answer": "The platform supports two authentication methods for API access:",
+    "answer": "The platform supports two authentication methods for API access: API Keys and OAuth 2.0.",
     "supported": true,
     "citations": [
       "authentication::chunk_0"
@@ -11,7 +11,7 @@
   {
     "id": 2,
     "question": "How long are webhook delivery logs retained?",
-    "answer": "Webhook delivery logs, including the request payload, response status, and response body, are retained for **30 days**.",
+    "answer": "Webhook delivery logs are retained for 30 days, after which they are permanently deleted and cannot be recovered.",
     "supported": true,
     "citations": [
       "webhooks::chunk_1"
@@ -20,7 +20,7 @@
   {
     "id": 3,
     "question": "Is there a free plan for startups?",
-    "answer": "The Free plan itself is already available to any developer, including startups, with no application required.",
+    "answer": "Yes, the Free plan is available to any developer, including startups, with no application required. Additionally, startups with fewer than 10 employees and under $1M in funding can apply for the Startup Program to receive Growth-tier features at no cost for the first 12 months.",
     "supported": true,
     "citations": [
       "pricing::chunk_1"
@@ -29,16 +29,17 @@
   {
     "id": 4,
     "question": "What happens if I exceed the rate limit?",
-    "answer": "If you exceed your rate limit, the API returns an HTTP `429 Too Many Requests` response.",
+    "answer": "If you exceed your rate limit, the API returns an HTTP 429 Too Many Requests response, and rate-limited requests are rejected outright rather than being queued.",
     "supported": true,
     "citations": [
+      "rate-limits::chunk_0",
       "rate-limits::chunk_1"
     ]
   },
   {
     "id": 5,
     "question": "Can I delete customer data immediately on request?",
-    "answer": "Customers can request deletion of their data at any time through the dashboard's \"Delete My Data\" tool or by contacting support.",
+    "answer": "No, customer-initiated deletion requests are not processed immediately; they are queued and executed within 30 days.",
     "supported": true,
     "citations": [
       "data-retention::chunk_1"
