@@ -1,0 +1,146 @@
+[
+  {
+    "id": 1,
+    "question": "What authentication methods does the API support?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "authentication::chunk_0",
+        "doc_id": "authentication",
+        "score": 0.2562,
+        "text": "# Authentication\n\n## Supported Methods\n\nThe platform supports two authentication methods for API access:\n\n1. **API Keys** — Static keys generated from the developer dashboard. Suitable for\n   server-to-server integrations. Keys should be passed in the `Authorization: Bearer <key>`\n   header on every request.\n2. **OAuth 2.0** — Recommended for applications acting on behalf of a user. Supports the\n   authorization code grant and client credentials grant."
+      },
+      {
+        "chunk_id": "pricing::chunk_0",
+        "doc_id": "pricing",
+        "score": 0.0695,
+        "text": "# Pricing & Plans\n\n## Plan Tiers\n\nThe platform offers three plans:\n\n- **Free** — $0/month. Includes 1,000 API requests/month, 1 webhook endpoint, and\n  community support. Designed for evaluation, side projects, and early-stage startups\n  testing the platform before committing to a paid plan.\n- **Growth** — $49/month. Includes 100,000 API requests/month, 10 webhook endpoints,\n  and email support with a 24-hour response target.\n- **Enterprise** — Custom pricing."
+      },
+      {
+        "chunk_id": "pricing::chunk_1",
+        "doc_id": "pricing",
+        "score": 0.0644,
+        "text": "endpoints,\n  and email support with a 24-hour response target.\n- **Enterprise** — Custom pricing. Includes unlimited API requests, dedicated support,\n  and a custom SLA. Contact sales for a quote.\n\n## Startup Program\n\nStartups with fewer than 10 employees and under $1M in funding can apply for the Startup\nProgram, which provides Growth-tier features at no cost for the first 12 months. The Free\nplan itself is already available to any developer, including startups, with no application\nrequired."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "question": "How long are webhook delivery logs retained?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "webhooks::chunk_1",
+        "doc_id": "webhooks",
+        "score": 0.2827,
+        "text": "so you can verify the\npayload originated from our platform.\n\n## Retry Policy\n\nIf your endpoint does not respond with a `2xx` status code, the event is retried up to 5\ntimes with exponential backoff, over a maximum window of 24 hours.\n\n## Delivery Log Retention\n\nWebhook delivery logs, including the request payload, response status, and response body,\nare retained for **30 days**. After 30 days, logs are permanently deleted and cannot be\nrecovered. You can export logs to CSV before they expire."
+      },
+      {
+        "chunk_id": "webhooks::chunk_0",
+        "doc_id": "webhooks",
+        "score": 0.1056,
+        "text": "# Webhooks\n\n## Overview\n\nWebhooks let your application receive real-time notifications when events occur, such as\npayment completion, subscription changes, or data export completion.\n\n## Delivery\n\nWebhook events are delivered via HTTP POST to the endpoint URL configured in your dashboard.\nEach delivery includes a signature header (`X-Webhook-Signature`) so you can verify the\npayload originated from our platform.\n\n## Retry Policy"
+      },
+      {
+        "chunk_id": "data-retention::chunk_0",
+        "doc_id": "data-retention",
+        "score": 0.0944,
+        "text": "# Data Retention & Deletion\n\n## Standard Retention\n\nCustomer data is retained for as long as an account remains active. Inactive accounts\n(no login or API activity for 12 months) are flagged for review and may be scheduled for\ndeletion after an additional 90-day notice period.\n\n## Customer-Initiated Deletion"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "question": "Is there a free plan for startups?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "pricing::chunk_1",
+        "doc_id": "pricing",
+        "score": 0.2033,
+        "text": "endpoints,\n  and email support with a 24-hour response target.\n- **Enterprise** — Custom pricing. Includes unlimited API requests, dedicated support,\n  and a custom SLA. Contact sales for a quote.\n\n## Startup Program\n\nStartups with fewer than 10 employees and under $1M in funding can apply for the Startup\nProgram, which provides Growth-tier features at no cost for the first 12 months. The Free\nplan itself is already available to any developer, including startups, with no application\nrequired."
+      },
+      {
+        "chunk_id": "rate-limits::chunk_0",
+        "doc_id": "rate-limits",
+        "score": 0.2017,
+        "text": "# API Rate Limits\n\n## Limits by Plan\n\n- Free plan: 10 requests/second, burst up to 20.\n- Growth plan: 50 requests/second, burst up to 100.\n- Enterprise plan: custom limits negotiated per contract.\n\n## Exceeding the Limit\n\nIf you exceed your rate limit, the API returns an HTTP `429 Too Many Requests` response."
+      },
+      {
+        "chunk_id": "pricing::chunk_0",
+        "doc_id": "pricing",
+        "score": 0.1367,
+        "text": "# Pricing & Plans\n\n## Plan Tiers\n\nThe platform offers three plans:\n\n- **Free** — $0/month. Includes 1,000 API requests/month, 1 webhook endpoint, and\n  community support. Designed for evaluation, side projects, and early-stage startups\n  testing the platform before committing to a paid plan.\n- **Growth** — $49/month. Includes 100,000 API requests/month, 10 webhook endpoints,\n  and email support with a 24-hour response target.\n- **Enterprise** — Custom pricing."
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "question": "What happens if I exceed the rate limit?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "rate-limits::chunk_1",
+        "doc_id": "rate-limits",
+        "score": 0.3361,
+        "text": "Limit\n\nIf you exceed your rate limit, the API returns an HTTP `429 Too Many Requests` response. The\nresponse includes a `Retry-After` header indicating how many seconds to wait before retrying.\nRequests that are rate-limited are not queued or processed later — they are rejected outright\nand must be resent by the client.\n\n## Monitoring Usage"
+      },
+      {
+        "chunk_id": "rate-limits::chunk_0",
+        "doc_id": "rate-limits",
+        "score": 0.2838,
+        "text": "# API Rate Limits\n\n## Limits by Plan\n\n- Free plan: 10 requests/second, burst up to 20.\n- Growth plan: 50 requests/second, burst up to 100.\n- Enterprise plan: custom limits negotiated per contract.\n\n## Exceeding the Limit\n\nIf you exceed your rate limit, the API returns an HTTP `429 Too Many Requests` response."
+      },
+      {
+        "chunk_id": "rate-limits::chunk_2",
+        "doc_id": "rate-limits",
+        "score": 0.2061,
+        "text": "later — they are rejected outright\nand must be resent by the client.\n\n## Monitoring Usage\n\nCurrent rate limit status is included in every API response via the `X-RateLimit-Remaining`\nand `X-RateLimit-Reset` headers, so clients can proactively throttle themselves before\nhitting a 429.\n\n## Repeated Violations\n\nAccounts that are rate-limited more than 100 times in a rolling 24-hour window may receive\na warning email. There is no automatic account suspension for rate limit violations alone."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "question": "Can I delete customer data immediately on request?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "data-retention::chunk_1",
+        "doc_id": "data-retention",
+        "score": 0.2236,
+        "text": "scheduled for\ndeletion after an additional 90-day notice period.\n\n## Customer-Initiated Deletion\n\nCustomers can request deletion of their data at any time through the dashboard's\n\"Delete My Data\" tool or by contacting support. Deletion requests are **not** processed\nimmediately — they are queued and executed within 30 days, in order to allow for fraud\nreview and to comply with financial record-keeping requirements in some jurisdictions."
+      },
+      {
+        "chunk_id": "data-retention::chunk_0",
+        "doc_id": "data-retention",
+        "score": 0.173,
+        "text": "# Data Retention & Deletion\n\n## Standard Retention\n\nCustomer data is retained for as long as an account remains active. Inactive accounts\n(no login or API activity for 12 months) are flagged for review and may be scheduled for\ndeletion after an additional 90-day notice period.\n\n## Customer-Initiated Deletion"
+      },
+      {
+        "chunk_id": "data-retention::chunk_2",
+        "doc_id": "data-retention",
+        "score": 0.0769,
+        "text": "for fraud\nreview and to comply with financial record-keeping requirements in some jurisdictions.\nDuring this 30-day window, the deletion can be cancelled by the customer.\n\n## Backups\n\nDeleted data may persist in encrypted backups for up to an additional 60 days after the\n30-day deletion window, after which backups are rotated and the data is unrecoverable.\n\n## Legal Holds"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "question": "Does the platform support GraphQL subscriptions?",
+    "retrieved_chunks": [
+      {
+        "chunk_id": "webhooks::chunk_2",
+        "doc_id": "webhooks",
+        "score": 0.1134,
+        "text": "are permanently deleted and cannot be\nrecovered. You can export logs to CSV before they expire.\n\n## Supported Event Types\n\nThe platform currently supports webhook events for: payments, subscriptions, user account\nchanges, and data export jobs. Real-time push protocols other than webhooks (such as\nWebSockets) are not covered by this document."
+      },
+      {
+        "chunk_id": "pricing::chunk_0",
+        "doc_id": "pricing",
+        "score": 0.1039,
+        "text": "# Pricing & Plans\n\n## Plan Tiers\n\nThe platform offers three plans:\n\n- **Free** — $0/month. Includes 1,000 API requests/month, 1 webhook endpoint, and\n  community support. Designed for evaluation, side projects, and early-stage startups\n  testing the platform before committing to a paid plan.\n- **Growth** — $49/month. Includes 100,000 API requests/month, 10 webhook endpoints,\n  and email support with a 24-hour response target.\n- **Enterprise** — Custom pricing."
+      },
+      {
+        "chunk_id": "webhooks::chunk_1",
+        "doc_id": "webhooks",
+        "score": 0.0915,
+        "text": "so you can verify the\npayload originated from our platform.\n\n## Retry Policy\n\nIf your endpoint does not respond with a `2xx` status code, the event is retried up to 5\ntimes with exponential backoff, over a maximum window of 24 hours.\n\n## Delivery Log Retention\n\nWebhook delivery logs, including the request payload, response status, and response body,\nare retained for **30 days**. After 30 days, logs are permanently deleted and cannot be\nrecovered. You can export logs to CSV before they expire."
+      }
+    ]
+  }
+]
