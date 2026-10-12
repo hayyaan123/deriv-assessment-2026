@@ -8,8 +8,14 @@ INIT -> DOCUMENTS_LOADED -> CHUNKS_CREATED -> INDEX_BUILT -> QUESTIONS_LOADED
 
 Every stage writes its intermediate output to artifacts/ so each step can be inspected.
 """
+import hashlib
 import json
+import os
+import re
+from datetime import datetime, timezone
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -22,6 +28,12 @@ ARTIFACTS_DIR = Path("artifacts")
 CHUNK_SIZE = 500      # max characters per chunk
 CHUNK_OVERLAP = 100   # characters shared between consecutive chunks
 TOP_K = 3             # chunks retrieved per question
+
+LLM_PROVIDER = "google-gemini"
+LLM_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+UNSUPPORTED_ANSWER = "The knowledge base does not provide enough information to answer this."
+# Used only by the offline fallback (no API key): below this retrieval score we refuse to answer.
+FALLBACK_MIN_SCORE = 0.15
 
 
 def log_stage(stage: str) -> None:
@@ -125,9 +137,122 @@ def retrieve_all(index: TfidfIndex, questions: list[dict]) -> list[dict]:
     } for q in questions]
 
 
+# ---- Stage 4: Answer generation (uses ONLY the retrieved chunks) ----
+PROMPT_TEMPLATE = """You are a support assistant for a developer platform.
+Answer the user's question using ONLY the context chunks below.
+
+Rules:
+1. Use only facts stated in the context. Do not use outside knowledge.
+2. Do not invent product features, limits, prices, or policies.
+3. If the context does not contain the answer, set "supported" to false, set "answer" to
+   exactly "{unsupported}", and return an empty "citations" list.
+4. If the answer is supported, cite every chunk you used by its chunk_id
+   (copy the IDs exactly as given). Only cite chunk_ids that appear below.
+5. Keep the answer short (1-3 sentences).
+
+Return ONLY a JSON object, no markdown, in this exact shape:
+{{"answer": "string", "supported": true, "citations": ["chunk_id", "..."]}}
+
+Context:
+{context}
+
+Question: {question}
+"""
+
+
+def build_prompt(question: str, chunks: list[dict]) -> str:
+    context = "\n\n".join(f"[chunk_id: {c['chunk_id']}]\n{c['text']}" for c in chunks)
+    return PROMPT_TEMPLATE.format(unsupported=UNSUPPORTED_ANSWER, context=context, question=question)
+
+
+def parse_llm_json(raw: str) -> dict:
+    """Extract the JSON object from the model output (tolerates ```json fences / extra text)."""
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    if not match:
+        raise ValueError("no JSON object in model output")
+    data = json.loads(match.group(0))
+    citations = data.get("citations") or []
+    if not isinstance(citations, list):
+        citations = [citations]
+    return {
+        "answer": str(data.get("answer", "")).strip(),
+        "supported": bool(data.get("supported", False)),
+        "citations": [str(c) for c in citations],
+    }
+
+
+def log_llm_call(record: dict) -> None:
+    with (ARTIFACTS_DIR / "llm_calls.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+
+def generate_with_gemini(client, item: dict) -> dict:
+    prompt = build_prompt(item["question"], item["retrieved_chunks"])
+    log = {
+        "stage": "answer_generation",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "provider": LLM_PROVIDER,
+        "model": LLM_MODEL,
+        "question_id": item["id"],
+        "prompt_hash": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        "input_artifacts": ["artifacts/retrieval_results.json"],
+        "output_artifact": "artifacts/answers.json",
+    }
+    try:
+        interaction = client.interactions.create(model=LLM_MODEL, input=prompt)
+        parsed = parse_llm_json(interaction.output_text)
+        log["status"] = "ok"
+    except Exception as e:  # API error or unparseable output -> refuse rather than guess
+        print(f"   ! question {item['id']}: LLM call failed ({type(e).__name__}: {e}); marking unsupported")
+        parsed = {"answer": UNSUPPORTED_ANSWER, "supported": False, "citations": []}
+        log["status"] = f"error: {type(e).__name__}"
+    log_llm_call(log)
+    return parsed
+
+
+STOPWORDS = {"the", "a", "an", "is", "are", "do", "does", "can", "i", "what", "how", "if",
+             "of", "to", "for", "on", "in", "there", "my", "it", "be", "and", "or", "long"}
+
+
+def generate_extractive(item: dict) -> dict:
+    """
+    Offline fallback when no API key is set (documented in README):
+    refuse if the best chunk scores below FALLBACK_MIN_SCORE, otherwise return the
+    sentence from the top chunk with the most question-term overlap, citing that chunk.
+    """
+    chunks = item["retrieved_chunks"]
+    if not chunks or chunks[0]["score"] < FALLBACK_MIN_SCORE:
+        return {"answer": UNSUPPORTED_ANSWER, "supported": False, "citations": []}
+    top = chunks[0]
+    q_terms = {w for w in re.findall(r"[a-z0-9]+", item["question"].lower()) if w not in STOPWORDS}
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n{2,}", top["text"]) if len(s.strip()) > 20]
+    best = max(sentences, key=lambda s: len(q_terms & set(re.findall(r"[a-z0-9]+", s.lower()))), default=top["text"])
+    return {"answer": " ".join(best.split()), "supported": True, "citations": [top["chunk_id"]]}
+
+
+def generate_answers(retrieval: list[dict]) -> tuple[list[dict], str]:
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    client = None
+    if api_key:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        mode = f"llm ({LLM_MODEL})"
+    else:
+        print("   ! GEMINI_API_KEY not set -> using offline extractive fallback")
+        mode = "extractive-fallback"
+
+    answers = []
+    for item in retrieval:
+        result = generate_with_gemini(client, item) if client else generate_extractive(item)
+        answers.append({"id": item["id"], "question": item["question"], **result})
+    return answers, mode
+
+
 def main() -> None:
+    load_dotenv()
     log_stage("INIT")
     ARTIFACTS_DIR.mkdir(exist_ok=True)
+    (ARTIFACTS_DIR / "llm_calls.jsonl").unlink(missing_ok=True)  # fresh log per run
 
     documents = load_documents(DOCS_DIR)
     save_json("documents.json", documents)
@@ -147,7 +272,11 @@ def main() -> None:
     save_json("retrieval_results.json", retrieval)
     log_stage("RETRIEVAL_COMPLETE")
 
-    # Next: ANSWERS_GENERATED -> CITATIONS_VALIDATED -> RESULTS_EXPORTED -> VALIDATION_COMPLETE
+    answers, mode = generate_answers(retrieval)
+    save_json("answers.json", answers)
+    log_stage(f"ANSWERS_GENERATED (mode: {mode})")
+
+    # Next: CITATIONS_VALIDATED -> RESULTS_EXPORTED -> VALIDATION_COMPLETE
 
 
 if __name__ == "__main__":

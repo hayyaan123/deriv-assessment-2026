@@ -1,0 +1,54 @@
+[
+  {
+    "id": 1,
+    "question": "What authentication methods does the API support?",
+    "answer": "The platform supports two authentication methods for API access:",
+    "supported": true,
+    "citations": [
+      "authentication::chunk_0"
+    ]
+  },
+  {
+    "id": 2,
+    "question": "How long are webhook delivery logs retained?",
+    "answer": "Webhook delivery logs, including the request payload, response status, and response body, are retained for **30 days**.",
+    "supported": true,
+    "citations": [
+      "webhooks::chunk_1"
+    ]
+  },
+  {
+    "id": 3,
+    "question": "Is there a free plan for startups?",
+    "answer": "The Free plan itself is already available to any developer, including startups, with no application required.",
+    "supported": true,
+    "citations": [
+      "pricing::chunk_1"
+    ]
+  },
+  {
+    "id": 4,
+    "question": "What happens if I exceed the rate limit?",
+    "answer": "If you exceed your rate limit, the API returns an HTTP `429 Too Many Requests` response.",
+    "supported": true,
+    "citations": [
+      "rate-limits::chunk_1"
+    ]
+  },
+  {
+    "id": 5,
+    "question": "Can I delete customer data immediately on request?",
+    "answer": "Customers can request deletion of their data at any time through the dashboard's \"Delete My Data\" tool or by contacting support.",
+    "supported": true,
+    "citations": [
+      "data-retention::chunk_1"
+    ]
+  },
+  {
+    "id": 6,
+    "question": "Does the platform support GraphQL subscriptions?",
+    "answer": "The knowledge base does not provide enough information to answer this.",
+    "supported": false,
+    "citations": []
+  }
+]
