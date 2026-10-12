@@ -56,14 +56,23 @@ def load_documents(docs_dir: Path) -> list[dict]:
     files = sorted(p for p in docs_dir.rglob("*") if p.suffix.lower() in {".md", ".txt"})
     if not files:
         raise FileNotFoundError(f"No .md or .txt files found in {docs_dir}/")
+    # doc_id = path inside docs/ without extension (e.g. "webhooks"); if two files share a
+    # stem (billing.md + billing.txt) the extension is kept so IDs stay unique.
+    stems = [p.relative_to(docs_dir).with_suffix("").as_posix() for p in files]
     documents = []
-    for p in files:
-        documents.append({
-            "doc_id": p.relative_to(docs_dir).with_suffix("").as_posix(),
-            "path": p.as_posix(),
-            "text": p.read_text(encoding="utf-8"),
-        })
+    for p, stem in zip(files, stems):
+        doc_id = stem if stems.count(stem) == 1 else p.relative_to(docs_dir).as_posix()
+        documents.append({"doc_id": doc_id, "path": p.as_posix(), "text": read_text_file(p)})
     return documents
+
+
+def read_text_file(path: Path) -> str:
+    """Read as UTF-8; fall back to Latin-1 for legacy-encoded .txt files instead of crashing."""
+    raw = path.read_bytes()
+    try:
+        return raw.decode("utf-8-sig")  # -sig also strips a BOM if present
+    except UnicodeDecodeError:
+        return raw.decode("latin-1")
 
 
 # ---- Stage 2: Chunking ----
